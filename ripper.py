@@ -9,7 +9,7 @@ import random
 import string
 import xml.etree.ElementTree as ET
 
-# Ignore RuntimeWarning notification
+# Ignore RuntimeWarning
 warnings.simplefilter('ignore', RuntimeWarning)
 
 async def check_single_url(short_url, valid_urls, xml_root):
@@ -24,30 +24,32 @@ async def check_single_url(short_url, valid_urls, xml_root):
 
         if match:
             if short_url not in valid_urls:
-                valid_urls.add(short_url)  # Add URL to set
+                valid_urls.add(short_url)
                 entry = ET.SubElement(xml_root, "track")
                 entry.text = short_url + "\n"
                 print(Fore.GREEN + "[+] Valid URL : ", short_url)
             else:
-                print(Fore.RED + "[-] Invalid URL : ", short_url)
+                print(Fore.YELLOW + "[*] URL already recorded : ", short_url)
         else:
             print(Fore.RED + "[-] Invalid URL : ", short_url)
 
 async def check(num_urls_to_generate):
-    valid_urls = set()  # Use a set to stock unique URL
+    valid_urls = set()
 
-    folder_name = "Hits"  # Folder "Hits"
-    file_name = "hits.xml"  # File "hits.xml"
+    folder_name = "Hits"
+    file_name = "hits.xml"
+
+    if os.path.exists(os.path.join(folder_name, file_name)):
+        existing_tree = ET.parse(os.path.join(folder_name, file_name))
+        existing_root = existing_tree.getroot()
+
+        for track in existing_root:
+            url = track.text.strip()
+            valid_urls.add(url)
 
     xml_root = ET.Element("tracks")
 
-    if os.path.exists(os.path.join(folder_name, file_name)):
-        # If file exist, load it
-        existing_tree = ET.parse(os.path.join(folder_name, file_name))
-        existing_root = existing_tree.getroot()
-        xml_root.extend(existing_root)
-
-    tasks = []  # Tasks list
+    tasks = []
 
     print("\n\n< Checking... >\n")
 
@@ -59,11 +61,12 @@ async def check(num_urls_to_generate):
         task = check_single_url(short_url, valid_urls, xml_root)
         tasks.append(task)
 
-    await asyncio.gather(*tasks)  # Wait for all tasks to be done
+    await asyncio.gather(*tasks)
 
-    # Create XML file with every URL on each line
-    with open(os.path.join(folder_name, file_name), "wb") as xml_file:  # Binary Mode
-        xml_tree = ET.ElementTree(xml_root)
+    existing_root.extend(xml_root)
+
+    with open(os.path.join(folder_name, file_name), "wb") as xml_file:
+        xml_tree = ET.ElementTree(existing_root)
         xml_tree.write(xml_file, encoding="utf-8", xml_declaration=True)
 
     print(Fore.YELLOW + f"\n[!] Finished ! {len(valid_urls)} private tracks found on {num_urls_to_generate} generated URL <3\n")
