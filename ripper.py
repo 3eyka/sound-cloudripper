@@ -7,11 +7,12 @@ from colorama import Fore
 from urllib.parse import urlparse, urlunparse
 import random
 import string
+import xml.etree.ElementTree as ET
 
-# Ignore RuntimeWarning
+# Ignore RuntimeWarning notification
 warnings.simplefilter('ignore', RuntimeWarning)
 
-async def check_single_url(short_url, valid_urls, hits_file):
+async def check_single_url(short_url, valid_urls, xml_root):
     response = await asyncio.to_thread(requests.get, short_url, allow_redirects=False)
 
     if response.status_code == 302:
@@ -24,38 +25,46 @@ async def check_single_url(short_url, valid_urls, hits_file):
         if match:
             if short_url not in valid_urls:
                 valid_urls.add(short_url)  # Add URL to set
+                entry = ET.SubElement(xml_root, "track")
+                entry.text = short_url + "\n"
                 print(Fore.GREEN + "[+] Valid URL : ", short_url)
-                hits_file.write(short_url + "\n")
             else:
                 print(Fore.RED + "[-] Invalid URL : ", short_url)
         else:
             print(Fore.RED + "[-] Invalid URL : ", short_url)
-    else:
-        print(Fore.RED + "[-] Invalid URL : ", short_url)
 
 async def check(num_urls_to_generate):
-    valid_urls = set()  # Use a set to store unique URLs
+    valid_urls = set()  # Use a set to stock unique URL
 
-    folder_name = input("\nFolder name : ")
-    file_name = input("File name (e.g. hits.txt) : ")
+    folder_name = "Hits"  # Folder "Hits"
+    file_name = "hits.xml"  # File "hits.xml"
 
-    if not os.path.exists(folder_name):
-        os.makedirs(folder_name)
+    xml_root = ET.Element("tracks")
 
-    with open(os.path.join(folder_name, file_name), "w") as hits_file:
-        tasks = []  # Tasks list
+    if os.path.exists(os.path.join(folder_name, file_name)):
+        # If file exist, load it
+        existing_tree = ET.parse(os.path.join(folder_name, file_name))
+        existing_root = existing_tree.getroot()
+        xml_root.extend(existing_root)
 
-        print("\n\n< Checking... >\n")  # Checking message
+    tasks = []  # Tasks list
 
-        for _ in range(num_urls_to_generate):
-            characters = string.ascii_letters + string.digits
-            rand = ''.join(random.choice(characters) for _ in range(5))
-            short_url = "https://on.soundcloud.com/" + rand
+    print("\n\n< Checking... >\n")
 
-            task = check_single_url(short_url, valid_urls, hits_file)
-            tasks.append(task)
+    for _ in range(num_urls_to_generate):
+        characters = string.ascii_letters + string.digits
+        rand = ''.join(random.choice(characters) for _ in range(5))
+        short_url = "https://on.soundcloud.com/" + rand
 
-        await asyncio.gather(*tasks)  # Wait for every tasks to be done
+        task = check_single_url(short_url, valid_urls, xml_root)
+        tasks.append(task)
+
+    await asyncio.gather(*tasks)  # Wait for all tasks to be done
+
+    # Create XML file with every URL on each line
+    with open(os.path.join(folder_name, file_name), "wb") as xml_file:  # Binary Mode
+        xml_tree = ET.ElementTree(xml_root)
+        xml_tree.write(xml_file, encoding="utf-8", xml_declaration=True)
 
     print(Fore.YELLOW + f"\n[!] Finished ! {len(valid_urls)} private tracks found on {num_urls_to_generate} generated URL <3\n")
 
