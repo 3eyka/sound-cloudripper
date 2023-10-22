@@ -16,17 +16,24 @@ a tool whichs basically finds private soundcloud tracks by bruteforcing shareabl
 
 ---
 ### CLI Arguments
-- -h will print out the possible commands
-- -x will output the positive results in a xml file
-- -l <int> will make the program run for n times (*one run[default] is ~100 requests*)
-- -v will prompt positive results in real time
-- -vv will prompt positive and negative results in real time
+- -h  |  print out the possible commands
+---
+- -r  |  base number of requests
+- -t  |  number of simultaneous threads **(multiplies the number of requests)**
+---
+- -x  |  exports the positive results in a xml file (output.xml), *and updates it if it already exists.*
+---
+- -v   |  prompts positive results in real time
+- -vv |  prompts positive and negative results in real time
 
 ---
-### Typical usage
+### Usage
+you can run the script without any arguments, the default values are enough for testing (25 requests, 1 thread, verbose mode).
+
+##### Example usage with arguments
 ```
-python3 ripper.py -x -l <int>
-(run ripper for n times and outputs positive results in xml file)
+python3 ripper.py -r 5 -t 5 -x
+(run cloudripper for 25(5*5) requests, and export positive results in xml)
 ```
 ---
 ### why python ?
