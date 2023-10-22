@@ -16,14 +16,15 @@ async def fetch_url(session, url):
     async with session.get(url, allow_redirects=False) as response:
         return response, await response.text()
 
-async def main(num_runs):
+async def main(num_runs, threads):
     #keep track of total requests
     total_requests = 0
+
     matched_urls = []
     print(Fore.LIGHTGREEN_EX + "[!] harvesting private tracks..." + Fore.RESET)
     for _ in range(num_runs):
         #random link gen
-        urls = [f"https://on.soundcloud.com/{''.join(random.choice(string.ascii_letters + string.digits) for _ in range(5))}" for _ in range(100)]
+        urls = [f"https://on.soundcloud.com/{''.join(random.choice(string.ascii_letters + string.digits) for _ in range(5))}" for _ in range(threads)]
         #aiohttp x async super multithread of doom
         async with aiohttp.ClientSession() as session:
             tasks = [fetch_url(session, url) for url in urls]
@@ -57,7 +58,7 @@ async def main(num_runs):
 
     #END OF MAIN SECTION ===============================================================================
 
-    if args.loop is None:
+    if args.requests is None:
         print(Fore.LIGHTYELLOW_EX + "[?] use 'ripper.py -h' or '--help' to view commands")
 
     #export to xml if xml switch is true
@@ -70,7 +71,7 @@ def xml_export(links):
     print(Fore.MAGENTA + "[+] XML export...")
     data = ET.Element("data")
     if not os.path.exists("output.xml"):
-        print(Fore.MAGENTA + "[+] creating output.xml...")
+        print(Fore.MAGENTA + "[+] creating 'output.xml'...")
         data = ET.Element("data")
     else:
         tree = ET.parse("output.xml")
@@ -103,21 +104,31 @@ if __name__ == "__main__":
     print(Fore.LIGHTGREEN_EX + "------------------------------------------" + Fore.RESET)
     #ARGS PARSER --------------------------------------------------------------------------------------------
     parser = argparse.ArgumentParser(description="-----manual-----")
-    parser.add_argument('-l', '--loop', type=int, help="the program will loop n times")
+    parser.add_argument('-r', '--requests', type=int, help="number of base requests")
+    parser.add_argument('-t', '--threads', type=int, help="number of simultaneous threads (multiplies the nbr of requests)")
     parser.add_argument('-x', '--xml_export', action='store_true', help="export found tracks in a XML file")
     parser.add_argument('-v', '--verbose', action='store_true', help="verbose mode, show more informations")
     parser.add_argument('-vv', '--very_verbose', action='store_true', help="very verbose mode, show ALL informations")
-    #todo : -r <-> bruteforces private token
-    #todo : -p <-> proxylist support ?
+    #todo : -? <-> bruteforces private token
+    #todo : -? <-> proxylist support ?
     #--------------------------------------------------------------------------------------------------------
-    # take arguments in args
+    # take arguments in 'args'
     args = parser.parse_args()
     
-    #num_runs = int(input("how much cycles (need to to switchs instead)>"))
-    if(args.loop is not None):
-        runs = args.loop * 100
-        print(Fore.LIGHTGREEN_EX + "[!] starting the script for approximately ", runs, " requests...")
-        asyncio.run(main(args.loop))
+    ###
+    if(args.requests is not None):
+        if(args.threads is not None):
+            runs = args.requests * args.threads
+            print(Fore.LIGHTGREEN_EX + "[!] starting cloudripper for exactly ", runs, " requests...")
+            asyncio.run(main(args.requests, args.threads))
+        else:
+            print(Fore.LIGHTGREEN_EX + "[!] starting cloudripper for exactly ", args.requests , " requests...")
+            asyncio.run(main(args.requests, 1))
     else:
-        print(Fore.LIGHTGREEN_EX + "[!] starting the script with the default value (only one cycle)")
-        asyncio.run(main(1))
+        print(Fore.YELLOW + "[?] no requests number set")
+        print(Fore.LIGHTGREEN_EX + "[!] starting cloudripper with the default params (25 requests, verbose)")
+        args.verbose = True
+        if(args.threads is None):
+            asyncio.run(main(25, 1))
+        else:
+            asyncio.run(main(25, args.threads))
