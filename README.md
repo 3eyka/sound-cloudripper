@@ -1,6 +1,33 @@
 # sound-cloudripper
 
-[![Python](https://img.shields.io/badge/Python-v3.12-yellow)]()
-[![Click Here Pog](https://img.shields.io/badge/Click-Here-red)](https://cdn.discordapp.com/attachments/1030253047739318274/1159043380706279454/image.png?ex=65420b43&is=652f9643&hm=5da2c07253d36f97c290209782e3b14b9a6d6282bd48c33e4303bc32818ebe66&)
+[![Python](https://img.shields.io/badge/Python-v3.11-yellow)]()
 
-a [**very simple**] tool whichs basically finds private soundcloud tracks by bruteforcing the shareable links aka shitty DynamicLinks of Firebase
+a tool whichs basically finds private soundcloud tracks by bruteforcing shareable links of on.soundcloud.com
+
+---
+##### Educationnal purposes only, use it at your own risk.
+---
+
+### Dependencies
+- aiohttp
+- asyncio
+- argparse
+- colorama
+
+---
+### CLI Arguments
+- -h will print out the possible commands
+- -x will output the positive results in a xml file
+- -l <int> will make the program run for n times (*one run[default] is ~100 requests*)
+- -v will prompt positive results in real time
+- -vv will prompt positive and negative results in real time
+
+---
+### Typical usage
+```
+python3 ripper.py -x -l <int>
+(run ripper for n times and outputs positive results in xml file)
+```
+---
+### why python ?
+bc we're dumb af lol
