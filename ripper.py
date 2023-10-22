@@ -38,7 +38,7 @@ async def main(num_runs):
                     match = re.search(r'/s-[a-zA-Z0-9]{11}', url_final)
 
                     if match:
-                        if(args.verbose):
+                        if(args.verbose or args.very_verbose):
                             print(Fore.LIGHTCYAN_EX + "[+] match : ", url_final)
                         total_requests += 1
                         matched_urls.append(url_final)
