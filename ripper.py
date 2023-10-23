@@ -21,7 +21,7 @@ async def main(num_runs, threads):
     total_requests = 0
 
     matched_urls = []
-    print(Fore.LIGHTGREEN_EX + "[!] harvesting private tracks..." + Fore.RESET)
+    print(Fore.LIGHTGREEN_EX + "\n[!] Harvesting private tracks...\n\n" + Fore.RESET)
     for _ in range(num_runs):
         #random link gen
         urls = [f"https://on.soundcloud.com/{''.join(random.choice(string.ascii_letters + string.digits) for _ in range(5))}" for _ in range(threads)]
@@ -40,21 +40,21 @@ async def main(num_runs, threads):
 
                     if match:
                         if(args.verbose or args.very_verbose):
-                            print(Fore.LIGHTCYAN_EX + "[+] match : ", url_final)
+                            print(Fore.GREEN + "[+] Valid URL: ", url)
                         total_requests += 1
                         matched_urls.append(url_final)
                     else:
                         if(args.very_verbose):
-                            print(Fore.YELLOW + "[-] not private")
+                            print(Fore.RED + "[-] Invalid URL: ", url)
                         total_requests += 1
                 else:
                     if(args.very_verbose):
-                        print(Fore.RED + "[x] not found")
+                        print(Fore.RED + "[-] Invalid URL: ", url)
                     total_requests += 1
     #============================================================================================
     #===================ON PROGRAM FINISH========================================================
 
-    print(Fore.LIGHTGREEN_EX + "[!] finished ! matched", len(matched_urls) ,"links, for a total of" , total_requests ,"requests <3")
+    print(Fore.YELLOW + "\n[!] Finished !", len(matched_urls) ,"private tracks found on" , total_requests ,"requests <3")
 
     #END OF MAIN SECTION ===============================================================================
 
@@ -68,10 +68,10 @@ async def main(num_runs, threads):
 
 #=======================additional functions=====================================================================
 def xml_export(links):
-    print(Fore.MAGENTA + "[+] XML export...")
+    print(Fore.MAGENTA + "\n[+] XML export...")
     data = ET.Element("data")
     if not os.path.exists("output.xml"):
-        print(Fore.MAGENTA + "[+] creating 'output.xml'...")
+        print(Fore.MAGENTA + "[+] Creating 'output.xml'...")
         data = ET.Element("data")
     else:
         tree = ET.parse("output.xml")
@@ -90,14 +90,14 @@ def xml_export(links):
         link_element.text = link
         user_element.append(link_element)
     ET.ElementTree(data).write("output.xml", encoding="utf-8", xml_declaration=True)
-    print(Fore.GREEN + "[+] done !")
+    print(Fore.GREEN + "\n[+] Done !\n")
 
 
 
 
 #ENTRY POINT
 if __name__ == "__main__":
-    print(Fore.LIGHTGREEN_EX + "------------------------------------------")
+    print(Fore.LIGHTGREEN_EX + "\n------------------------------------------")
     print(Fore.LIGHTGREEN_EX + "/ / / / / " + Fore.LIGHTYELLOW_EX + "C L O U D R I P P E R" + Fore.LIGHTGREEN_EX + " / / / / /")
     print(Fore.LIGHTGREEN_EX + "------------------------------------------" + Fore.RESET)
     print(Fore.RESET + "created by " + Fore.MAGENTA + "yuuechka<3" + Fore.RESET + " & " + Fore.LIGHTRED_EX + "fancymalware(mk0)" + Fore.RESET)
@@ -119,7 +119,7 @@ if __name__ == "__main__":
     if(args.requests is not None):
         if(args.threads is not None):
             runs = args.requests * args.threads
-            print(Fore.LIGHTGREEN_EX + "[!] starting cloudripper for exactly ", runs, " requests...")
+            print(Fore.LIGHTGREEN_EX + "\n[!] starting cloudripper for exactly ", runs, " requests...")
             asyncio.run(main(args.requests, args.threads))
         else:
             print(Fore.LIGHTGREEN_EX + "[!] starting cloudripper for exactly ", args.requests , " requests...")
